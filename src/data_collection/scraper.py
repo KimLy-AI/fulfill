@@ -7,8 +7,8 @@ from pathlib import Path
 import requests
 import logging
 import time
-from config import Config
-from google_drive_service import GoogleDriveService
+from src.config.config import Config
+from src.data_collection.google_drive_service import GoogleDriveService
 
 logger = logging.getLogger(__name__)
 
