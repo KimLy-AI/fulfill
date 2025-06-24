@@ -18,7 +18,27 @@ class ImagePreprocessor:
         # Resize the image
         img = img.resize((base_width, new_height), Image.Resampling.LANCZOS)
         return img
+    def crop_image(self, pil_img, border: int = 3) -> bool:
+        """
+        Crop replacement image, remove transparent areas and add border.
+        Returns True if successful, False otherwise.
+        """
+        try:
+            # Get bounding box of non-transparent pixels
+            bbox = pil_img.getbbox()
 
+            # Crop to bounding box
+            cropped = pil_img.crop(bbox)
+            w, h = cropped.size
+            new_w, new_h = w + border * 2, h + border * 2
+
+            # Create image with transparent background
+            bordered = Image.new('RGBA', (new_w, new_h), (0, 0, 0, 0))
+            bordered.paste(cropped, (border, border))
+            return bordered
+        except Exception as e:
+            print(f"Error processing: {e}")
+            return False
     def background_flatten(self, rgba_img: Image.Image, name_stem: str, output_target_dir: pathlib.Path):
         """
         Composites an RGBA image with gray, black, or white backgrounds and saves them.
@@ -107,7 +127,7 @@ class ImagePreprocessor:
                     file_stem = input_file_path.stem
 
                     # Flatten background and save variants
-                    rgba_img = self.resize_image(rgba_img)
+                    rgba_img = self.resize_image(self.crop_image(Image.open(input_file_path)))
                     self.background_flatten(rgba_img, file_stem, output_target_subfolder)
                     processed_files_count += 1
 
@@ -128,8 +148,8 @@ if __name__ == "__main__":
     
     project_base_dir = pathlib.Path(__file__).parent.parent.resolve() 
 
-    input_directory = project_base_dir.joinpath('data/images/Design/')
-    output_directory = project_base_dir.joinpath("data/images/Design_flattened/")
+    input_directory = project_base_dir.joinpath('data/images/Design')
+    output_directory = project_base_dir.joinpath("data/images/design_crop_flattened_test/")
     
     # --- End Configuration ---
 
