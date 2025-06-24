@@ -1,0 +1,6 @@
+data/
+demo/
+venv/
+.venv/
+create_db
+oot
