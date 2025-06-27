@@ -3,12 +3,14 @@ import numpy as np
 import pathlib
 
 class ImagePreprocessor:
-    def __init__(self):
+    def __init__(self, input_directory, output_directory):
         """
         Initializes the ImagePreprocessor.
         Defines common image extensions to be processed.
         """
         self.image_extensions = {'.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff', '.webp'}
+        self.input_directory = input_directory
+        self.output_directory = output_directory
     
     def resize_image(self, img, base_width = 512):
         # Calculate the aspect ratio
@@ -138,6 +140,8 @@ class ImagePreprocessor:
         print(f"\n--- Processing Summary ---")
         print(f"Found {found_image_files} image file(s).")
         print(f"Successfully processed and saved variants for {processed_files_count} file(s).")
+    def run(self):
+        self.process_folder(self.input_directory, self.output_directory)
 
 if __name__ == "__main__":
     # Instantiate the preprocessor
@@ -148,8 +152,8 @@ if __name__ == "__main__":
     
     project_base_dir = pathlib.Path(__file__).parent.parent.resolve() 
 
-    input_directory = project_base_dir.joinpath('data/images/Design')
-    output_directory = project_base_dir.joinpath("data/images/design_crop_flattened_test/")
+    input_directory = project_base_dir.joinpath('data/images/downloaded_images')
+    output_directory = project_base_dir.joinpath("data/images/design_flattended")
     
     # --- End Configuration ---
 

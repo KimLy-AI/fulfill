@@ -24,7 +24,7 @@ class CLIPSimilaritySearcher:
         self.model, self.preprocess, self.device = load_clip_model(model_name, device)
         self.embedd_df = None
         self.dataset_features = None
-        self.create_embedding = create_embeddings(dataset_folder='exc_design_cropped')
+        self.create_embedding = create_embeddings(dataset_folder='design_cropped')
     
     def load_embeddings(self, embedding_file: str = 'embedding_vector_test.csv') -> None:
         try:

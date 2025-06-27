@@ -1,0 +1,4 @@
+gcs_raw_prefix: "raw_data"
+local_tmp: "tmp"
+local_data: "data"
+mini_batch_size: 500

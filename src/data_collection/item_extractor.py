@@ -5,7 +5,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from typing import List, Dict, Optional
 import logging
 import time
-from config import Config
+from configs import Config
 
 logger = logging.getLogger(__name__)
 

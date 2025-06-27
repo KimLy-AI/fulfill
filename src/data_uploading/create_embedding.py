@@ -90,6 +90,7 @@ def create_embeddings(dataset_folder: str = 'design_crop_flattened', output_file
         feature_shape = list(image_features_dict.values())[0].shape
         print(f"Feature vector shape: {feature_shape}")
         print(f"Total embedding size: {len(image_features_dict) * feature_shape[0]} features")
+    # return df_embeddings
 
 if __name__ == "__main__":
     create_embeddings()

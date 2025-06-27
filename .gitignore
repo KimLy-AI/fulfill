@@ -1,5 +1,5 @@
 data/
 image_preprocess.ipynb
 token_drive_v3.pickle 
-.env
+src/.env
 credentials/

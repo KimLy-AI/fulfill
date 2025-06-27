@@ -1,73 +1,86 @@
-from src.config.config import Config
+from src.configs.config import Config
 # from src.data_collection.scraper import GoogleDriveScraper
 from src.logging_setup.logging_setup import setup_logging
+import pathlib
 from pathlib import Path
 import logging
 import json
 from src.models.clip_model import CLIPSimilaritySearcher
+from src.data_uploading.create_embedding import create_embeddings
+from src.data_uploading.upload_data_to_vectorDB import EmbeddingUploader
+from src.data_preprocessing.image_preprocess import ImagePreprocessor
+
 import os
-import torch 
+import torch
+import multiprocessing
+from src.data_setup.setup_data import SetupData
+
 logger = setup_logging()
 
-def main():
-    context = "Main"
+
+def process_mini_batch(mini_batch_name, config, batch_name, embedding_func):
     try:
-        # config = Config(
-        #     folder_url="https://drive.google.com/drive/folders/1_UeVZ_VhfB3yjDwTMAPOf9xygnN5uvT_",
-        #     output_csv="metadata/drive_folder_images.csv",
-        #     chrome_profile_path=str(Path.home() / "AppData/Local/Google/Chrome/User Data/Profile 1"),
-        #     download_dir="downloaded_images_api",
-        #     client_secret_file="src/credentials/client_secret.json"
-        # )
-        # config.validate()
+        # Embedding
+        script_location = pathlib.Path(__file__).parent.resolve()
 
-    #     logger.info("Starting Google Drive image scraper...", extra={'context': context})
-    #     scraper = GoogleDriveScraper(config)
-    #     scraper.all_images = scraper.scrape_folder_recursively(config.folder_url, folder_name="root")
-    #     scraper.save_to_csv()
-    #     # scraper.download_images()
-    #     logger.info("Scraping, CSV saving, and downloading completed.", extra={'context': context})
+        project_base_dir = pathlib.Path(__file__).parent.parent.resolve()
+        output_directory = project_base_dir.joinpath("data/images/design_flattended")
 
-    
-        # Step 1: Initialize the searcher
-        searcher = CLIPSimilaritySearcher(model_name="ViT-B/32", device="cuda" if torch.cuda.is_available() else "cpu")
+        config.logger.info(f"Start embedding data for {mini_batch_name}...")
+        ImagePreprocessor(
+            input_name=mini_batch_name,
+            output_directory = output_directory
+        ).run()
 
-        # Step 2: Load precomputed embeddings
-        embedding_file = "embedding_vector_cropped.csv"
-        searcher.load_embeddings(embedding_file)
-
-        # Step 3: Process a single image
-        image_path = "src\data\images\design_cropped\ JJ sau đen_cropped.png"
-        single_result = searcher.process_single_image(image_path, top_k=5)
-        print(f"Single Image Result{single_result}")
-        # # Step 4: Process a directory of images
-        # input_dir = "random_labels_cropped"
-        # directory_results = searcher.process_directory(input_dir, top_k=5)
-
-        # # Step 5: Save results to CSV
-        # results_file = searcher.save_results_to_csv(directory_results)
-        # print(f"Results saved to: {results_file}")
-
-        # # Step 6: Get and save summary statistics
-        # stats = searcher.get_summary_stats(directory_results)
-        # summary_file = searcher.save_summary_to_csv(stats, directory_results)
-        # print(f"Summary saved to: {summary_file}")
-
-        # # Optional: Print summary statistics
-        # print("\nSummary Statistics:")
-        # for key, value in stats.items():
-        #     if key.endswith('_pct'):
-        #         print(f"{key.replace('_pct', '')}: {value:.1f}%")
-        #     else:
-        #         print(f"{key}: {value}")
-    except FileNotFoundError as e:
-        logger.error(f"Configuration or credentials file not found: {e}", extra={'context': context})
+        return mini_batch_name, "success"
     except Exception as e:
-        logger.error(f"Error in main execution: {e}", extra={'context': context})
-        import traceback
-        logger.error(f"Traceback: {traceback.format_exc()}", extra={'context': context})
-        
+        config.logger.error(f"Error processing {mini_batch_name}: {str(e)}")
+        return mini_batch_name, "failed", str(e)
 
+def worker_function(mini_batch_name):
+    # Each worker loads its own copy of the model
+    config = Config()  # Each worker creates its own config
+    embedding_func = create_embeddings
+
+    return process_mini_batch(
+        mini_batch_name=mini_batch_name,
+        config=config,
+        batch_name=config.batch_name,  # Get from config
+        embedding_func=embedding_func
+    )
+def main():
+    # # 0. Load config and params
+    config = Config(stage="MAIN")
+
+    # 1. Set up data if needed
+    config.logger.info(f"Start setting up data...")
+    SetupData().setup()
+
+    # 2. Create and start processes with initializer for embedding parallely
+    config.logger.info(f"Start processing and embedding data...")
+
+    if config.is_test:
+        config.logger.info("Running in test mode, using a single mini batch for testing.")
+        mini_batch_names = ["mini_batch1"]
+    else:
+        config.logger.info("Running in production mode, processing all mini batches.")
+        mini_batch_names = get_immediate_subfolder_names(config.base_dir / "data/images")
+
+    with multiprocessing.Pool(processes=config.num_processes) as pool:
+        results = pool.map(worker_function, mini_batch_names)
+
+    config.logger.info("\nProcessing summary:")
+    for result in results:
+        if result[1] == "success":
+            config.logger.info(f"{result[0]}: Success")
+        else:
+            config.logger.error(f"{result[0]}: Failed - {result[2]}")
+
+    # 3. Load embedding data
+    config.logger.info("Starting embedding uploader...")
+    EmbeddingUploader(mini_batch_names).run()
 
 if __name__ == "__main__":
+
+    # Run pipline
     main()
